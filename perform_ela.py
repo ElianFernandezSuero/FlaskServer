@@ -21,11 +21,14 @@ def perform_ela(image_path, quality=90, scale=10):
         scale_factor = 255.0 / max_diff if max_diff != 0 else 1
         ela_image = ImageEnhance.Brightness(ela_image).enhance(scale_factor * scale)
         ela_image = ImageOps.autocontrast(ela_image)
-        ela_path = os.path.join(os.path.dirname(image_path), 'static/uploads/ela_result.png')
+
+        # Guardar la imagen ELA en la carpeta correcta (static/uploads/)
+        ela_path = os.path.join('static/uploads', 'ela_result.png')  # Asegura que se guarde en static/uploads
         ela_image.save(ela_path)
 
         # Limpiar imagen temporal
         os.remove(temp_image_path)
+
         return ela_path
     except Exception as e:
         print(f"Failed to perform ELA: {e}")
@@ -67,13 +70,9 @@ def index():
             # Ejecutar ELA
             ela_result_path = perform_ela(image_path)
 
-            if ela_result_path is None:
-                return "Error al realizar el análisis ELA.", 500
-
             # Extraer metadatos y geotags
             metadata, geo_tags = extract_metadata(image_path)
 
-            # Pasar las variables al renderizar el template
             return render_template('result.html', ela_result_path=ela_result_path, metadata=metadata, geo_tags=geo_tags)
 
     return render_template('index.html')
