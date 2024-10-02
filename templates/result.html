@@ -35,7 +35,7 @@
                     <span class="material-icons">newspaper</span>
                     <span class="ml-3">Actualizaciones</span>
                 </a>
-                <a href="/donaciones" class="flex items-center px-4 py-2 text-white bg-yellow-600 text-sm">
+                <a href="/donaciones" class="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-100 text-sm">
                     <span class="material-icons">volunteer_activism</span>
                     <span class="ml-3">Donaciones</span>
                 </a>
@@ -72,7 +72,8 @@
             <div class="mb-8">
                 <h2 class="text-2xl font-semibold text-yellow-600 mb-4">Error Level Analysis (ELA)</h2>
                 <div class="bg-white shadow-md p-6 rounded-lg text-center">
-                    <img src="{{ url_for('static', filename='uploads/ela_result.png') }}" alt="ELA Image" class="max-w-full mx-auto">
+                    <!-- result.html -->
+                    <img src="{{ url_for('display_image', image_path=ela_result_path) }}" alt="ELA Image">
 
                 </div>
             </div>

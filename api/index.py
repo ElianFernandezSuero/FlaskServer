@@ -1,16 +1,15 @@
-from flask import Flask, render_template, request, redirect, url_for
+from flask import Flask, render_template, render_template_string, request, redirect, url_for, send_file
 from PIL import Image, ImageChops, ImageEnhance, ImageOps
 import os
 import exifread
 
 app = Flask(__name__)
 
-# Función para realizar ELA
 def perform_ela(image_path, quality=90, scale=10):
     try:
-        # Recompresión de imagen y análisis de diferencias
+        # Recompresión de la imagen y análisis de diferencias
         original = Image.open(image_path).convert('RGB')
-        temp_image_path = os.path.join(os.path.dirname(image_path), 'temp_image.jpg')
+        temp_image_path = os.path.join('/tmp', 'temp_image.jpg')  # Guardar temporalmente en /tmp
         original.save(temp_image_path, 'JPEG', quality=quality)
         recompressed = Image.open(temp_image_path)
         ela_image = ImageChops.difference(original, recompressed)
@@ -21,15 +20,20 @@ def perform_ela(image_path, quality=90, scale=10):
         scale_factor = 255.0 / max_diff if max_diff != 0 else 1
         ela_image = ImageEnhance.Brightness(ela_image).enhance(scale_factor * scale)
         ela_image = ImageOps.autocontrast(ela_image)
-        ela_path = os.path.join(os.path.dirname(image_path), 'static/uploads/ela_result.png')
+
+        # Guardar la imagen ELA en /tmp
+        ela_filename = 'ela_result.png'
+        ela_path = os.path.join('/tmp', ela_filename)
         ela_image.save(ela_path)
 
-        # Limpiar imagen temporal
+        # Limpiar la imagen temporal
         os.remove(temp_image_path)
-        return ela_path
+
+        return ela_filename  # Devolver solo el nombre del archivo
     except Exception as e:
         print(f"Failed to perform ELA: {e}")
         return None
+
 
 # Función para extraer metadatos y geotags
 def extract_metadata(image_path):
@@ -60,9 +64,9 @@ def index():
             return redirect(request.url)
         
         if image:
-            # Guardar la imagen en el servidor
-            image_path = os.path.join('static/uploads', image.filename)
-            image.save(image_path)
+            # Guardar la imagen en el servidor en /tmp
+            image_path = os.path.join('/tmp', image.filename)
+            image.save(image_path)  # Guardar la imagen en /tmp
             
             # Ejecutar ELA
             ela_result_path = perform_ela(image_path)
@@ -78,5 +82,30 @@ def index():
 
     return render_template('index.html')
 
+@app.route('/display_image/<path:image_path>')
+def display_image(image_path):
+    # Asegúrate de buscar en /tmp
+    full_image_path = os.path.join('/tmp', image_path)
+    print(f"Intentando acceder a: {full_image_path}")  # Depurar la ruta
+    if os.path.exists(full_image_path):
+        print(f"Sirviendo el archivo: {full_image_path}")
+        return send_file(full_image_path, mimetype='image/png')
+    else:
+        print(f"Archivo no encontrado: {full_image_path}")
+        return "Archivo no encontrado", 404
+
+@app.route('/list_tmp')
+def list_tmp():
+    # Obtener la lista de archivos en el directorio /tmp
+    files = os.listdir('/tmp')
+    # Renderizar los archivos en una plantilla simple
+    return render_template_string('''
+        <h1>Archivos en /tmp</h1>
+        <ul>
+        {% for file in files %}
+            <li>{{ file }}</li>
+        {% endfor %}
+        </ul>
+    ''', files=files)
 if __name__ == '__main__':
     app.run(debug=True)

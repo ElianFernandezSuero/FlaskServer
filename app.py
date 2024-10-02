@@ -1,12 +1,11 @@
-from flask import Flask, render_template, request, redirect, url_for
+from flask import Flask, render_template, render_template_string, request, redirect, url_for, send_file
 import os
 from perform_ela import perform_ela
 from exifread import process_file  # Asegúrate de tener exifread instalado
 
 app = Flask(__name__)
 
-UPLOAD_FOLDER = './static/uploads'
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+UPLOAD_FOLDER = '/tmp'  # Cambiado a /tmp para usar el almacenamiento temporal
 
 # Función para extraer metadatos y geotags
 def extract_metadata(image_path):
@@ -62,22 +61,50 @@ def analyze():
         return 'No se seleccionó ningún archivo.'
 
     if file:
-        filepath = os.path.join(UPLOAD_FOLDER, file.filename)
+        filepath = os.path.join('/tmp', file.filename)  # Usar /tmp para guardar temporalmente
         file.save(filepath)
 
         # Ejecutar el análisis ELA
         ela_result_path = perform_ela(filepath)
 
         if ela_result_path:
+            # Si `perform_ela` devuelve la ruta completa, asegúrate de que sea solo el nombre del archivo.
+            ela_result_path = 'ela_result.png'
+
             # Extraer metadatos y geotags
             metadata, geo_tags = extract_metadata(filepath)
 
-            # Renderizar la plantilla de resultados con las variables
+            # Renderizar la plantilla de resultados
             return render_template('result.html', ela_result_path=ela_result_path, metadata=metadata, geo_tags=geo_tags)
         else:
             return 'Error al realizar el análisis ELA.'
 
     return redirect(url_for('index'))
+@app.route('/display_image/<path:image_path>')
+def display_image(image_path):
+    # Asegúrate de buscar en /tmp
+    full_image_path = os.path.join('/tmp', image_path)
+    print(f"Intentando acceder a: {full_image_path}")  # Depurar la ruta
+    if os.path.exists(full_image_path):
+        print(f"Sirviendo el archivo: {full_image_path}")
+        return send_file(full_image_path, mimetype='image/png')
+    else:
+        print(f"Archivo no encontrado: {full_image_path}")
+        return "Archivo no encontrado", 404
+
+@app.route('/list_tmp')
+def list_tmp():
+    # Obtener la lista de archivos en el directorio /tmp
+    files = os.listdir('/tmp')
+    # Renderizar los archivos en una plantilla simple
+    return render_template_string('''
+        <h1>Archivos en /tmp</h1>
+        <ul>
+        {% for file in files %}
+            <li>{{ file }}</li>
+        {% endfor %}
+        </ul>
+    ''', files=files)
 
 if __name__ == '__main__':
     app.run(debug=True)
